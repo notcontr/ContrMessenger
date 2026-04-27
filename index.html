@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>General Chat</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0e1621;
+    --surface:#17212b;
+    --surface2:#1e2c3a;
+    --accent:#5eaaec;
+    --text:#f5f5f5;
+    --text2:#8b9bab;
+    --radius:12px;
+    --transition:0.25s cubic-bezier(.4,0,.2,1);
+  }
+  html,body{height:100%;font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  body{display:flex;justify-content:center;align-items:center}
+
+  @font-face {
+    font-family: MST;
+    src: url(Montserrat-Regular.ttf);
+  }
+  
+  * {
+    font-family: MST;
+  }
+
+  /* ===== AUTH SCREEN ===== */
+  .auth-screen{
+    width:100%;max-width:420px;padding:24px;
+    animation:fadeUp .5s ease both;
+  }
+  .auth-card{
+    background:var(--surface);border-radius:16px;padding:32px 28px;
+    box-shadow:0 8px 32px rgba(0,0,0,.35);
+  }
+  .auth-card h1{font-size:24px;text-align:center;margin-bottom:4px}
+  .auth-card .subtitle{text-align:center;color:var(--text2);font-size:14px;margin-bottom:24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+  .field input{
+    width:100%;padding:12px 14px;border-radius:var(--radius);border:none;
+    background:var(--surface2);color:var(--text);font-size:15px;
+    outline:none;transition:box-shadow var(--transition);
+  }
+  .field input:focus{box-shadow:0 0 0 2px var(--accent)}
+  .btn{
+    width:100%;padding:13px;border:none;border-radius:var(--radius);
+    font-size:15px;font-weight:600;cursor:pointer;
+    transition:opacity var(--transition),transform var(--transition);
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{opacity:.88}
+  .btn-ghost{background:transparent;color:var(--accent);margin-top:10px}
+  .btn-ghost:hover{opacity:.7}
+  .error-msg{color:#e57373;font-size:13px;text-align:center;margin-top:12px;min-height:18px}
+  .loader{text-align:center;color:var(--text2);margin-top:16px;font-size:14px}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--text2);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+
+  /* ===== CHAT SCREEN ===== */
+  .chat-screen{
+    width:100%;height:100vh;display:flex;flex-direction:column;
+    animation:fadeIn .4s ease both;
+  }
+  .chat-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;background:var(--surface);
+    box-shadow:0 1px 4px rgba(0,0,0,.2);flex-shrink:0;
+  }
+  .chat-header h2{font-size:18px;font-weight:600}
+  .chat-header .user-info{font-size:13px;color:var(--text2)}
+  .btn-logout{
+    background:none;border:none;color:var(--text2);cursor:pointer;
+    font-size:14px;padding:6px 12px;border-radius:8px;
+    transition:background var(--transition),color var(--transition);
+  }
+  .btn-logout:hover{background:rgba(255,255,255,.08);color:var(--text)}
+
+  .messages-area{
+    flex:1;overflow-y:auto;padding:16px 20px 8px;
+    display:flex;flex-direction:column;gap:6px;
+    scroll-behavior:smooth;
+  }
+  .messages-area::-webkit-scrollbar{width:5px}
+  .messages-area::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px}
+
+  .msg{
+    max-width:72%;padding:10px 14px;border-radius:var(--radius);
+    animation:msgIn .35s cubic-bezier(.2,.8,.3,1) both;
+    position:relative;word-wrap:break-word;
+  }
+  .msg .msg-user{font-size:12px;font-weight:700;margin-bottom:3px;opacity:.85}
+  .msg .msg-text{font-size:14.5px;line-height:1.45}
+  .msg .msg-time{font-size:11px;opacity:.5;text-align:right;margin-top:4px}
+  .msg.self{align-self:flex-end}
+  .msg.other{align-self:flex-start}
+
+  .msg-date-divider{
+    text-align:center;color:var(--text2);font-size:12px;
+    padding:12px 0;animation:fadeIn .4s ease both;
+  }
+  .msg-date-divider span{background:rgba(255,255,255,.08);padding:4px 14px;border-radius:20px}
+
+  /* ===== INPUT BAR ===== */
+  .input-bar{
+    display:flex;gap:10px;padding:12px 16px 16px;
+    background:var(--surface);flex-shrink:0;
+    align-items:flex-end;
+  }
+  .input-bar textarea{
+    flex:1;resize:none;border:none;border-radius:var(--radius);
+    background:var(--surface2);color:var(--text);font-size:15px;
+    padding:12px 14px;outline:none;max-height:120px;
+    font-family:inherit;line-height:1.4;
+    transition:box-shadow var(--transition);
+  }
+  .input-bar textarea:focus{box-shadow:0 0 0 2px var(--accent)}
+  .btn-send{
+    width:46px;height:46px;border:none;border-radius:50%;
+    background:var(--accent);color:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;transition:opacity var(--transition),transform var(--transition);
+  }
+  .btn-send:hover{opacity:.85}
+  .btn-send:active{transform:scale(.9)}
+  .btn-send svg{width:22px;height:22px}
+
+  .sending-indicator{text-align:center;color:var(--text2);font-size:13px;padding:4px 0}
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes msgIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ===== HIDDEN ===== */
+  .hidden{display:none!important}
+
+  /* ===== RESPONSIVE ===== */
+  @media(max-width:600px){
+    .auth-card{padding:24px 20px}
+    .msg{max-width:85%}
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1>💬 General Chat</h1>
+    <p class="subtitle">Войди или создай аккаунт</p>
+
+    <div id="loginForm">
+      <div class="field">
+        <label>Юзернейм</label>
+        <input id="loginUser" type="text" placeholder="username" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input id="loginPass" type="password" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">Войти</button>
+      <button class="btn btn-ghost" onclick="toggleAuthMode()">Нет аккаунта? Создать</button>
+      <div class="error-msg" id="loginError"></div>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <div class="field">
+        <label>Юзернейм</label>
+        <input id="regUser" type="text" placeholder="придумай имя" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input id="regPass" type="password" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="handleRegister()">Зарегистрироваться</button>
+      <button class="btn btn-ghost" onclick="toggleAuthMode()">Уже есть аккаунт? Войти</button>
+      <div class="error-msg" id="regError"></div>
+    </div>
+
+    <div class="loader hidden" id="authLoader"><span class="spinner"></span>Подключение...</div>
+  </div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div id="chatScreen" class="chat-screen hidden">
+  <div class="chat-header">
+    <div>
+      <h2>💬 General Chat</h2>
+      <span class="user-info" id="headerUser"></span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Выйти</button>
+  </div>
+
+  <div class="messages-area" id="messagesArea">
+    <!-- messages injected here -->
+  </div>
+
+  <div class="sending-indicator hidden" id="sendIndicator"><span class="spinner"></span>Отправка...</div>
+
+  <div class="input-bar">
+    <textarea id="msgInput" rows="1" placeholder="Написать сообщение..." onkeydown="handleKey(event)"></textarea>
+    <button class="btn-send" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ============================
+// ⚙️  НАСТРОЙКИ — ЗАПОЛНИ СВОИ
+// ============================
+const CONFIG = {
+  OWNER: 'ТВОЙ_НИКНЕЙМ',         // твой username на GitHub
+  REPO:  'my-chat',              // название репозитория
+  TOKEN: 'ghp_ИЛИ_github_pat_...' // твой Personal Access Token
+};
+
+const USERS_PATH  = 'users.json';
+const MSGS_PATH   = 'messages.json';
+const API = `https://api.github.com/repos/${CONFIG.OWNER}/${CONFIG.REPO}/contents`;
+
+let currentUser = null;   // { username, color }
+let pollTimer   = null;
+let lastSha     = { users: null, messages: null };
+let currentMsgs = [];
+
+// ============================
+//  GitHub API helpers
+// ============================
+async function fetchFile(path) {
+  const res = await fetch(`${API}/${path}?t=${Date.now()}`, {
+    headers: { Authorization: `Bearer ${CONFIG.TOKEN}`, Accept: 'application/vnd.github+json' }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return {
+    content: JSON.parse(atob(data.content)),
+    sha: data.sha
+  };
+}
+
+async function updateFile(path, newContent, sha) {
+  const body = JSON.stringify({
+    message: `chat update: ${path}`,
+    content: btoa(unescape(encodeURIComponent(JSON.stringify(newContent)))),
+    sha,
+    branch: 'main'
+  });
+  const res = await fetch(`${API}/${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${CONFIG.TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ============================
+//  Простой хеш пароля
+// ============================
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h.toString(36);
+}
+
+// ============================
+//  Рандомный цвет (пастельный, читаемый на тёмном)
+// ============================
+function randomPastel() {
+  const h = Math.floor(Math.random() * 360);
+  const s = 50 + Math.floor(Math.random() * 25);
+  const l = 45 + Math.floor(Math.random() * 20);
+  return `hsla(${h},${s}%,${l}%,0.5)`;
+}
+
+// ============================
+//  Auth UI
+// ============================
+function toggleAuthMode() {
+  document.getElementById('loginForm').classList.toggle('hidden');
+  document.getElementById('registerForm').classList.toggle('hidden');
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('regError').textContent = '';
+}
+
+function showLoader(show) {
+  document.getElementById('authLoader').classList.toggle('hidden', !show);
+}
+
+async function handleLogin() {
+  const username = document.getElementById('loginUser').value.trim().toLowerCase();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+
+  if (!username || !password) { errEl.textContent = 'Заполни все поля'; return; }
+
+  showLoader(true);
+  try {
+    const { content, sha } = await fetchFile(USERS_PATH);
+    lastSha.users = sha;
+    const users = content.users || {};
+    if (!users[username]) { errEl.textContent = 'Пользователь не найден'; showLoader(false); return; }
+    if (users[username].password !== simpleHash(password)) { errEl.textContent = 'Неверный пароль'; showLoader(false); return; }
+
+    currentUser = { username, color: users[username].color };
+    enterChat();
+  } catch(e) {
+    errEl.textContent = 'Ошибка подключения: ' + e.message;
+  }
+  showLoader(false);
+}
+
+async function handleRegister() {
+  const username = document.getElementById('regUser').value.trim().toLowerCase();
+  const password = document.getElementById('regPass').value;
+  const errEl = document.getElementById('regError');
+  errEl.textContent = '';
+
+  if (!username || !password) { errEl.textContent = 'Заполни все поля'; return; }
+  if (username.length < 2) { errEl.textContent = 'Минимум 2 символа'; return; }
+  if (!/^[a-z0-9_]+$/.test(username)) { errEl.textContent = 'Только латиница, цифры, _'; return; }
+
+  showLoader(true);
+  try {
+    const { content, sha } = await fetchFile(USERS_PATH);
+    const users = content.users || {};
+    if (users[username]) { errEl.textContent = 'Юзернейм занят'; showLoader(false); return; }
+
+    users[username] = { password: simpleHash(password), color: randomPastel() };
+    await updateFile(USERS_PATH, { users }, sha);
+
+    currentUser = { username, color: users[username].color };
+    enterChat();
+  } catch(e) {
+    errEl.textContent = 'Ошибка: ' + e.message;
+  }
+  showLoader(false);
+}
+
+function enterChat() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('chatScreen').classList.remove('hidden');
+  document.getElementById('headerUser').textContent = `@${currentUser.username}`;
+  loadMessages();
+  pollMessages();
+}
+
+function logout() {
+  currentUser = null;
+  clearInterval(pollTimer);
+  document.getElementById('chatScreen').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('messagesArea').innerHTML = '';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// ============================
+//  Messages
+// ============================
+async function loadMessages() {
+  try {
+    const { content, sha } = await fetchFile(MSGS_PATH);
+    lastSha.messages = sha;
+    currentMsgs = content.messages || [];
+    renderMessages();
+  } catch(e) {
+    console.error('Load msgs error:', e);
+  }
+}
+
+async function pollMessages() {
+  pollTimer = setInterval(async () => {
+    try {
+      const { content, sha } = await fetchFile(MSGS_PATH);
+      if (sha !== lastSha.messages) {
+        lastSha.messages = sha;
+        currentMsgs = content.messages || [];
+        renderMessages();
+      }
+    } catch(e) { /* silently retry */ }
+  }, 2500);
+}
+
+function renderMessages() {
+  const area = document.getElementById('messagesArea');
+  const wasAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
+
+  // Group by date
+  let html = '';
+  let lastDate = '';
+  currentMsgs.forEach((m, i) => {
+    const d = new Date(m.timestamp);
+    const dateStr = d.toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:'numeric' });
+    if (dateStr !== lastDate) {
+      html += `<div class="msg-date-divider"><span>${dateStr}</span></div>`;
+      lastDate = dateStr;
+    }
+    const isSelf = m.username === currentUser.username;
+    const cls = isSelf ? 'self' : 'other';
+    const delay = Math.min(i * 0.04, 0.6);
+    const time = d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+    html += `
+      <div class="msg ${cls}" style="background:${m.color};animation-delay:${delay}s">
+        ${!isSelf ? `<div class="msg-user">${esc(m.username)}</div>` : ''}
+        <div class="msg-text">${esc(m.text)}</div>
+        <div class="msg-time">${time}</div>
+      </div>`;
+  });
+  area.innerHTML = html;
+
+  if (wasAtBottom) area.scrollTop = area.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  autoResize(input);
+  document.getElementById('sendIndicator').classList.remove('hidden');
+
+  try {
+    const { content, sha } = await fetchFile(MSGS_PATH);
+    const messages = content.messages || [];
+    messages.push({
+      username: currentUser.username,
+      text,
+      timestamp: Date.now(),
+      color: currentUser.color
+    });
+    // Keep last 500 messages to avoid huge files
+    if (messages.length > 500) messages.splice(0, messages.length - 500);
+    await updateFile(MSGS_PATH, { messages }, sha);
+    currentMsgs = messages;
+    lastSha.messages = sha;
+    renderMessages();
+  } catch(e) {
+    alert('Ошибка отправки: ' + e.message);
+  }
+  document.getElementById('sendIndicator').classList.add('hidden');
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+// Auto-resize textarea
+const msgInput = document.getElementById('msgInput');
+msgInput.addEventListener('input', () => autoResize(msgInput));
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Enter on auth fields
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+document.getElementById('regPass').addEventListener('keydown', e => { if(e.key==='Enter') handleRegister(); });
+</script>
+</body>
+</html>
